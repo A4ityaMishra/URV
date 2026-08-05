@@ -31,7 +31,7 @@ if not API_KEY:
 
 # Pin an exact model slug -- check https://openrouter.ai/models for current names.
 # Start cheap for pilot runs; swap to a frontier model once this is confirmed working.
-MODEL = "openai/gpt-4o-mini"
+MODEL = "anthropic/claude-sonnet-4"
 _safe_model = MODEL.replace("/", "_")
 
 # Paths are relative to this script's location (so ./ is really URV/scripts/),
