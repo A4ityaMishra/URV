@@ -98,6 +98,19 @@ def call_model(system_prompt: str, user_prompt: str) -> tuple[str, float]:
     except (KeyError, IndexError) as e:
         raise RuntimeError(f"Unexpected choices shape ({e}): {json.dumps(data)}") from e
 
+    if not content:
+        # HTTP 200, valid choices shape, but content is null/empty -- seen
+        # intermittently (provider flake), not tied to any specific trial.
+        # Must raise here or this silently "succeeds" with no error logged.
+        # finish_reason (e.g. "content_filter", "error", "length") is usually
+        # the actual "why" -- surface it up front instead of burying it in
+        # the full dump, so it's visible in the console line without having
+        # to open the results file.
+        finish_reason = data["choices"][0].get("finish_reason", "unknown")
+        raise RuntimeError(
+            f"Empty/null content (finish_reason={finish_reason}): {json.dumps(data)}"
+        )
+
     try:
         cost = data["usage"]["cost"]
     except KeyError as e:
