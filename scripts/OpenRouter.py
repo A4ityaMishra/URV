@@ -45,7 +45,19 @@ MAX_WORKERS = int(os.environ.get("MAX_WORKERS", "5"))
 # Paths are relative to this script's location (so ./ is really URV/scripts/),
 
 TRIALS_PATH = Path(__file__).parent / "../dataset/trials.json"
-RESULTS_PATH = Path(__file__).parent / f"../outputs/results_OpenRouter_{_safe_model}.json"
+
+
+def next_results_path(safe_model: str) -> Path:
+    """First unused results_OpenRouter_<model>[_runN].json path, so reruns
+    of the same model never clobber a previous results file."""
+    outputs_dir = Path(__file__).parent / "../outputs"
+    base = outputs_dir / f"results_OpenRouter_{safe_model}.json"
+    if not base.exists():
+        return base
+    n = 2
+    while (candidate := outputs_dir / f"results_OpenRouter_{safe_model}_run{n}.json").exists():
+        n += 1
+    return candidate
 
 
 def call_model(system_prompt: str, user_prompt: str) -> tuple[str, float]:
@@ -191,14 +203,15 @@ def main():
     results = [results_by_index[i] for i in range(len(ordered_trials))]
 
     # Make sure the outputs/ folder exists before writing to it
-    RESULTS_PATH.parent.mkdir(parents=True, exist_ok=True)
-    with open(RESULTS_PATH, "w") as o:
+    results_path = next_results_path(_safe_model)
+    results_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(results_path, "w") as o:
         json.dump(results, o, indent=2)
 
     n_failed = sum(1 for r in results if r["worker_response"] is None)
     print(f"\nDone. {len(results) - n_failed}/{len(results)} succeeded.")
     print(f"Total cost this run: ${running_cost:.4f}")
-    print(f"Results saved -> {RESULTS_PATH}")
+    print(f"Results saved -> {results_path}")
  
  
 if __name__ == "__main__":
