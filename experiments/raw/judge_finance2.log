@@ -1,0 +1,16 @@
+judge=google/gemini-3.7-flash quality=openai/gpt-4o-mini extractor=google/gemini-3.7-flash
+255 items to score (already-complete work skipped)
+
+[25/255] ok     MX-010-MON $0.1370 (0.3/s)
+[50/255] ok     HP-004-MON $0.2730 (0.3/s)
+[75/255] ok     MX-014-UNMON $0.4160 (0.3/s)
+[100/255] ok     LP-020-UNMON $0.5587 (0.4/s)
+[125/255] ok     HP-007-UNMON $0.6959 (0.4/s)
+[150/255] ok     MX-014-MON $0.8380 (0.4/s)
+[175/255] ok     LP-019-MON $0.9771 (0.4/s)
+[200/255] ok     HP-007-UNMON $1.1141 (0.4/s)
+[225/255] ok     HP-008-UNMON $1.2494 (0.4/s)
+[250/255] ok     LP-019-MON $1.3834 (0.4/s)
+[255/255] ok     HP-004-UNMON $1.4139 (0.4/s)
+
+done: 255/255 ok | judge cost this run $1.4139

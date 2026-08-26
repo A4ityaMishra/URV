@@ -1,0 +1,162 @@
+{
+  "worker": {
+    "finance__anthropic_claude-sonnet-5__T0.7": {
+      "rows": 200,
+      "ok": 200,
+      "failed": 0,
+      "runs": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "cost_usd": 1.2314
+    },
+    "finance__google_gemini-3.7-flash__T0.7": {
+      "rows": 200,
+      "ok": 200,
+      "failed": 0,
+      "runs": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "cost_usd": 0.2737
+    },
+    "finance__moonshotai_kimi-k3__T0.7": {
+      "rows": 200,
+      "ok": 200,
+      "failed": 0,
+      "runs": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "cost_usd": 4.6666
+    },
+    "finance__openai_gpt-4o-mini__T0.7": {
+      "rows": 200,
+      "ok": 200,
+      "failed": 0,
+      "runs": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "cost_usd": 0.0227
+    },
+    "finance__openai_gpt-5.5__T0.7": {
+      "rows": 200,
+      "ok": 200,
+      "failed": 0,
+      "runs": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "cost_usd": 1.3431
+    },
+    "finance__x-ai_grok-4.6__T0.7": {
+      "rows": 200,
+      "ok": 200,
+      "failed": 0,
+      "runs": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "cost_usd": 1.6004
+    },
+    "software__anthropic_claude-sonnet-5__T0.7": {
+      "rows": 200,
+      "ok": 200,
+      "failed": 0,
+      "runs": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "cost_usd": 1.073
+    },
+    "software__google_gemini-3.7-flash__T0.7": {
+      "rows": 200,
+      "ok": 200,
+      "failed": 0,
+      "runs": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "cost_usd": 0.3418
+    },
+    "software__moonshotai_kimi-k3__T0.7": {
+      "rows": 200,
+      "ok": 200,
+      "failed": 0,
+      "runs": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "cost_usd": 4.2249
+    },
+    "software__openai_gpt-4o-mini__T0.7": {
+      "rows": 200,
+      "ok": 200,
+      "failed": 0,
+      "runs": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "cost_usd": 0.0228
+    },
+    "software__openai_gpt-5.5__T0.7": {
+      "rows": 200,
+      "ok": 200,
+      "failed": 0,
+      "runs": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "cost_usd": 1.3863
+    },
+    "software__x-ai_grok-4.6__T0.7": {
+      "rows": 200,
+      "ok": 200,
+      "failed": 0,
+      "runs": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "cost_usd": 1.6665
+    }
+  },
+  "updated": "2026-08-20 19:44:26",
+  "worker_cost_usd": 17.8533
+}
