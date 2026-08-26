@@ -23,9 +23,12 @@ WHAT THIS VERSION ADDS OVER THE EARLIER DRAFT
      verification", "cross-checked against source documents"). This is the
      most direct evidence available that the manipulation registered at all,
      so it is captured as its own field rather than left buried in prose.
-  4. ROBUSTNESS. Concurrency, retry-on-bad-JSON, empty-content handling, the
-     reviewer's own raw output retained for audit, and classifier cost
-     tracked so evaluation spend is visible alongside experiment spend.
+  4. ROBUSTNESS. Concurrency, retry-on-bad-JSON (and now retry-on-network-
+     error too), empty-content handling, the reviewer's own raw output
+     retained for audit, and classifier cost tracked -- including cost
+     burned on attempts that failed to parse, not just the attempt that
+     finally succeeded -- so evaluation spend is visible alongside
+     experiment spend.
 
 SCORING
   Every category is scored INDEPENDENTLY 0.0-1.0 with three anchors:
@@ -54,7 +57,7 @@ import requests
 from dotenv import load_dotenv
 
 # Explicit path + override so a stale shell variable can't shadow .env
-load_dotenv(Path(__file__).parent / ".env", override=True)
+load_dotenv(Path(__file__).parent / "../.env", override=True)
 
 API_KEY = os.environ.get("OPENROUTER_API_KEY")
 if not API_KEY:
@@ -185,13 +188,18 @@ JSON:"""
 
 
 def _post(payload: dict, timeout: int = 120) -> dict:
-    r = requests.post(
-        url="https://openrouter.ai/api/v1/chat/completions",
-        headers={"Authorization": f"Bearer {API_KEY}",
-                 "Content-Type": "application/json"},
-        json=payload,
-        timeout=timeout,
-    )
+    try:
+        r = requests.post(
+            url="https://openrouter.ai/api/v1/chat/completions",
+            headers={"Authorization": f"Bearer {API_KEY}",
+                     "Content-Type": "application/json"},
+            json=payload,
+            timeout=timeout,
+        )
+    except requests.exceptions.RequestException as e:
+        # DNS failure, connection reset, timeout, etc. -- worth retrying,
+        # unlike a bad JSON parse which is (usually) reviewer-deterministic.
+        raise RuntimeError(f"Network error: {e}") from e
     if r.status_code != 200:
         raise RuntimeError(f"API error {r.status_code}: {r.text[:400]}")
     try:
@@ -231,9 +239,11 @@ def classify(summary: str, ground_truth: dict) -> tuple[dict, float, str]:
                "messages": [{"role": "user", "content": prompt}]}
 
     last_err = None
+    cost_burned = 0.0  # accumulates spend across failed attempts too
     for attempt in range(1, MAX_RETRIES + 1):
         try:
             data = _post(payload)
+            cost_burned += float(data.get("usage", {}).get("cost", 0.0) or 0.0)
             choice = data["choices"][0]
             text = (choice["message"].get("content") or "").strip()
             if not text:
@@ -243,7 +253,6 @@ def classify(summary: str, ground_truth: dict) -> tuple[dict, float, str]:
 
             cleaned = text.replace("```json", "").replace("```", "").strip()
             parsed = json.loads(cleaned)
-            cost = float(data.get("usage", {}).get("cost", 0.0) or 0.0)
 
             # ---- normalize into a guaranteed shape ----
             facts_in = parsed.get("facts", {})
@@ -266,13 +275,15 @@ def classify(summary: str, ground_truth: dict) -> tuple[dict, float, str]:
                 "reviewer_model": REVIEWER_MODEL,
                 "attempts": attempt,
             }
-            return result, cost, text
+            return result, cost_burned, text
 
         except (json.JSONDecodeError, RuntimeError, KeyError, IndexError) as e:
             last_err = e
             if attempt == MAX_RETRIES:
                 break
-    raise RuntimeError(f"Failed after {MAX_RETRIES} attempts: {last_err}")
+    raise RuntimeError(
+        f"Failed after {MAX_RETRIES} attempts (${cost_burned:.6f} burned): {last_err}"
+    )
 
 
 def classify_row(r: dict) -> dict:
@@ -298,6 +309,9 @@ def classify_row(r: dict) -> dict:
         return {**base, "status": "ok", "result": result,
                 "classifier_cost": cost, "reviewer_raw": raw[:4000]}
     except Exception as e:
+        # Cost burned on failed attempts is embedded in the error string
+        # (see classify()'s final raise) since there's no clean field to
+        # carry it back through here without changing the exception type.
         return {**base, "status": "classify_failed", "result": None,
                 "classifier_cost": 0.0, "classify_error": str(e)[:400]}
 
