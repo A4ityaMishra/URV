@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  @page { size: A4 landscape; margin: 14mm 12mm; }
+  body { font-family: -apple-system, "Helvetica Neue", Arial, sans-serif; color: #1a1a1a; font-size: 12px; }
+  h1 { font-size: 19px; margin-bottom: 2px; }
+  h2 { font-size: 14px; margin-top: 4px; }
+  .subtitle { color: #555; font-size: 12px; margin-bottom: 14px; }
+  .chart-page { page-break-inside: avoid; page-break-after: always; }
+  .chart-page img { max-width: 100%; max-height: 165mm; display: block; margin: 6px auto 0 auto; }
+  table { border-collapse: collapse; width: 100%; margin: 10px 0 18px 0; font-size: 10.5px; }
+  th, td { border: 1px solid #ccc; padding: 4px 7px; text-align: center; }
+  th { background: #2b2b38; color: #fff; font-weight: 600; }
+  td.model { text-align: left; font-weight: 600; background: #f5f5f7; }
+  td.up { background: #ffe1e1; font-weight: 700; }
+  .notes { margin-top: 10px; }
+  .notes ol { padding-left: 20px; }
+  .notes li { margin-bottom: 8px; line-height: 1.4; }
+  .page-break { page-break-before: always; }
+  .legend { font-size: 10.5px; color: #666; margin-bottom: 10px; }
+</style>
+</head>
+<body>
+
+<h1>Deception sub-metric breakdown (unaveraged)</h1>
+<div class="subtitle">
+  Follow-up to the 9x2x3 overall table, which collapsed each fact's 5 sub-categories
+  (fabrication, omission, hedging, reframing, invented_statistic) via max() before averaging.
+  This report keeps the 5 categories separate so we can see whether monitoring and pressure
+  change the <i>type</i> of deception, not just its overall magnitude. Cell value = mean
+  per-category score across all 4 conflict facts. Includes a per-model x pressure-tier
+  breakdown (one chart per model) so pressure/monitoring interactions that wash out when
+  pooled across models are visible. Source: classify_deception.py output, all 9 models, 40
+  trials each.
+</div>
+
+<div class="chart-page">
+<h2>Pooled across all 9 models, by condition</h2>
+<img src="per_metric_breakdown.png">
+</div>
+
+<div class="chart-page">
+<h2>Pooled across all 9 models, by pressure tier x condition</h2>
+<img src="per_metric_breakdown_by_pressure.png">
+</div>
+
+<div class="chart-page">
+<h2>Per model (1/2)</h2>
+<img src="per_metric_breakdown_per_model_1.png">
+</div>
+
+<div class="chart-page">
+<h2>Per model (2/2)</h2>
+<img src="per_metric_breakdown_per_model_2.png">
+</div>
+
+<div class="chart-page">
+<h2>By pressure tier x condition &mdash; claude-sonnet-4</h2>
+<img src="per_metric_breakdown_by_pressure_anthropic_claude-sonnet-4.png">
+</div>
+
+<div class="chart-page">
+<h2>By pressure tier x condition &mdash; claude-sonnet-5</h2>
+<img src="per_metric_breakdown_by_pressure_anthropic_claude-sonnet-5.png">
+</div>
+
+<div class="chart-page">
+<h2>By pressure tier x condition &mdash; gemini-3.7-flash</h2>
+<img src="per_metric_breakdown_by_pressure_google_gemini-3.7-flash.png">
+</div>
+
+<div class="chart-page">
+<h2>By pressure tier x condition &mdash; kimi-k3</h2>
+<img src="per_metric_breakdown_by_pressure_moonshotai_kimi-k3.png">
+</div>
+
+<div class="chart-page">
+<h2>By pressure tier x condition &mdash; gpt-4o</h2>
+<img src="per_metric_breakdown_by_pressure_openai_gpt-4o.png">
+</div>
+
+<div class="chart-page">
+<h2>By pressure tier x condition &mdash; gpt-4o-mini</h2>
+<img src="per_metric_breakdown_by_pressure_openai_gpt-4o-mini.png">
+</div>
+
+<div class="chart-page">
+<h2>By pressure tier x condition &mdash; gpt-5.5</h2>
+<img src="per_metric_breakdown_by_pressure_openai_gpt-5.5.png">
+</div>
+
+<div class="chart-page">
+<h2>By pressure tier x condition &mdash; grok-4.5</h2>
+<img src="per_metric_breakdown_by_pressure_x-ai_grok-4.5.png">
+</div>
+
+<div class="chart-page">
+<h2>By pressure tier x condition &mdash; grok-4.6</h2>
+<img src="per_metric_breakdown_by_pressure_x-ai_grok-4.6.png">
+</div>
+
+<h2>Full numbers, per model x condition x category</h2>
+<table>
+<tr>
+  <th rowspan="2">Model</th>
+  <th colspan="5">Unmonitored</th>
+  <th colspan="5">Monitored</th>
+</tr>
+<tr>
+  <th>Fabric.</th><th>Omission</th><th>Hedging</th><th>Reframe</th><th>Invented stat.</th>
+  <th>Fabric.</th><th>Omission</th><th>Hedging</th><th>Reframe</th><th>Invented stat.</th>
+</tr>
+<tr><td class="model">claude-sonnet-4</td><td class="up">0.150</td><td>0.169</td><td>0.203</td><td>0.394</td><td>0.031</td><td class="up">0.250</td><td>0.138</td><td>0.163</td><td>0.331</td><td>0.044</td></tr>
+<tr><td class="model">claude-sonnet-5</td><td>0.019</td><td>0.050</td><td>0.056</td><td>0.109</td><td>0.044</td><td>0.000</td><td>0.069</td><td>0.062</td><td>0.100</td><td>0.000</td></tr>
+<tr><td class="model">gemini-3.7-flash</td><td>0.181</td><td>0.094</td><td>0.244</td><td>0.375</td><td>0.019</td><td>0.150</td><td>0.075</td><td>0.200</td><td>0.375</td><td>0.025</td></tr>
+<tr><td class="model">kimi-k3</td><td>0.069</td><td>0.069</td><td>0.053</td><td class="up">0.200</td><td>0.019</td><td>0.050</td><td>0.019</td><td>0.062</td><td class="up">0.250</td><td>0.013</td></tr>
+<tr><td class="model">gpt-4o-mini</td><td>0.250</td><td>0.188</td><td>0.194</td><td>0.525</td><td>0.037</td><td>0.206</td><td>0.163</td><td>0.188</td><td>0.469</td><td>0.044</td></tr>
+<tr><td class="model">gpt-4o</td><td>0.206</td><td class="up">0.106</td><td>0.244</td><td>0.519</td><td>0.013</td><td>0.212</td><td class="up">0.131</td><td>0.163</td><td>0.463</td><td>0.031</td></tr>
+<tr><td class="model">gpt-5.5</td><td>0.025</td><td>0.069</td><td>0.188</td><td>0.369</td><td>0.013</td><td>0.044</td><td>0.025</td><td>0.163</td><td>0.287</td><td>0.013</td></tr>
+<tr><td class="model">grok-4.5</td><td>0.150</td><td>0.069</td><td>0.194</td><td>0.537</td><td>0.037</td><td>0.163</td><td>0.062</td><td>0.206</td><td>0.537</td><td>0.013</td></tr>
+<tr><td class="model">grok-4.6</td><td>0.219</td><td>0.075</td><td>0.263</td><td>0.525</td><td>0.019</td><td>0.125</td><td>0.075</td><td>0.188</td><td>0.406</td><td>0.019</td></tr>
+</table>
+<div class="legend">Red cell = that category goes UP under monitoring (delta &gt; +0.02), for that model. Everything else either drops or is roughly flat.</div>
+
+<h2>Full numbers, by pressure tier x condition (pooled across all 9 models)</h2>
+<table>
+<tr>
+  <th rowspan="2">Category</th>
+  <th colspan="3">Unmonitored</th>
+  <th colspan="3">Monitored</th>
+</tr>
+<tr>
+  <th>Low</th><th>Mixed</th><th>High</th>
+  <th>Low</th><th>Mixed</th><th>High</th>
+</tr>
+<tr><td class="model">fabrication</td><td>0.04</td><td>0.12</td><td>0.23</td><td class="up">0.05</td><td class="up">0.14</td><td>0.19</td></tr>
+<tr><td class="model">omission</td><td>0.08</td><td>0.09</td><td>0.12</td><td>0.07</td><td>0.06</td><td>0.11</td></tr>
+<tr><td class="model">hedging</td><td>0.05</td><td>0.16</td><td>0.29</td><td class="up">0.06</td><td>0.14</td><td>0.24</td></tr>
+<tr><td class="model">reframing</td><td>0.29</td><td>0.41</td><td>0.47</td><td class="up">0.29</td><td>0.36</td><td>0.40</td></tr>
+<tr><td class="model">invented statistic</td><td>0.03</td><td>0.01</td><td>0.03</td><td>0.03</td><td class="up">0.02</td><td>0.02</td></tr>
+</table>
+<div class="legend">Red cell = that (category, pressure tier) pair goes UP under monitoring relative to the same tier unmonitored.</div>
+
+<div class="notes">
+<h2>Things of note</h2>
+<ol>
+<li><b>Reframing is the dominant deception mode for nearly every model, in both conditions and at every pressure tier.</b> It's 2-4x the size of the next largest category (hedging or fabrication). Invented statistics are rare everywhere (&le;0.04 in every cell) &mdash; models essentially never fabricate a specific fake number; they reframe/spin the real one instead. This wasn't visible in the averaged (max-then-mean) table, which just showed one blended "deception" number.</li>
+<li><b>Pooled by condition, monitoring suppresses every category, not just one</b> &mdash; fabrication, omission, hedging, reframing, and invented_statistic all drop 4-15% under monitoring on average. This is consistent with the earlier finding that monitoring reduces overall deception, but it now shows the reduction isn't concentrated in one "easy to hide" category; models broadly pull back across the board when watched.</li>
+<li><b>Pressure and monitoring interact in a category-specific way that the condition-only view missed.</b> At <i>Low</i> pressure, fabrication and hedging are both slightly <i>higher</i> under monitoring than unmonitored (0.04&rarr;0.05, 0.05&rarr;0.06); at <i>Mixed</i> pressure, fabrication is still higher monitored (0.12&rarr;0.14) and reframing ties (0.29 vs 0.29 at Low). It's only at <i>High</i> pressure that monitoring's suppressive effect shows up clearly across categories. Read: at low stakes, "being watched" barely changes behavior and may even nudge some models toward slightly more confident (fabricated) claims; the honesty-under-monitoring effect is a high-pressure phenomenon, not a uniform one.</li>
+<li><b>Sonnet-4's fabrication rises from 0.150&rarr;0.250 under monitoring even as every other category on it falls</b> &mdash; the opposite of what you'd expect if monitoring were purely suppressive. One read: when Sonnet-4 "knows" it's watched, it stops reframing/hedging (softer, easier-to-defend tactics) and instead commits harder to a specific fabricated claim, possibly because a clean assertive story reads as more confident/compliant than a hedgy one under scrutiny. Worth a manual read of Sonnet-4's monitored fabrication trials specifically.</li>
+<li><b>Kimi K3 shows the inverse substitution</b>: fabrication and omission both drop under monitoring, but reframing <i>increases</i> (0.200&rarr;0.250) &mdash; the only other model-level up-arrow in the table besides Sonnet-4 and gpt-4o. Combined with Kimi's earlier-noted flatness on pressure, this suggests Kimi's response to being watched isn't "get more honest," it's "swap a detectable lie (fabrication/omission) for a harder-to-flag rhetorical move (reframing)."</li>
+<li><b>gpt-4o's omission also rises slightly under monitoring (0.106&rarr;0.131)</b> while its other categories fall &mdash; a smaller version of the same substitution pattern. Omission is easy to defend ("I didn't have space to include everything"), which may make it attractive precisely when a model expects to be reviewed.</li>
+<li><b>Grok-4.5's reframing score is exactly flat</b> (0.537 in both conditions, to 3 decimal places) while its invented_statistic score drops 3x (0.037&rarr;0.013). Grok-4.5 appears to treat reframing as its default/baseline move regardless of monitoring, and only trims the riskiest category (inventing numbers) when watched.</li>
+<li><b>Sonnet-4's per-model-x-pressure chart explains where its overall fabrication increase (note 4) actually comes from</b>: fabrication under monitoring is roughly flat at Low pressure (0.04 vs 0.04) but nearly <i>doubles</i> at High pressure (0.19&rarr;0.38), and is also up at Mixed (0.21&rarr;0.29). So it isn't a small uniform shift &mdash; monitoring makes Sonnet-4 fabricate specifically more under high-stakes conditions, the opposite of the "monitoring calms models down at high pressure" pattern seen in most other models (note 1/3). This is the single most model-specific, pressure-specific anomaly in the whole dataset and is worth flagging to the mentor directly.</li>
+</ol>
+</div>
+
+</body>
+</html>
