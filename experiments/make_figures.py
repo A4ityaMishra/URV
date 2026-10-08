@@ -13,8 +13,9 @@ can never disagree with the table in RESULTS.md. Error bars are the STANDARD
 DEVIATION ACROSS THE 5 REPEAT RUNS -- the same quantity as the +/- in the
 tables, and the thing the current poster charts are missing.
 
-This is NOT scripts/per_metric_breakdown.py, which belongs to the superseded
-9-model pipeline in outputs/ and reads a different, incomparable score scale.
+This is NOT legacy/scripts/per_metric_breakdown.py, which belongs to the
+superseded 9-model pipeline in legacy/outputs/ and reads a different,
+incomparable score scale.
 
 Figures produced:
 
@@ -44,8 +45,8 @@ try:
 except ImportError:  # pragma: no cover
     raise SystemExit("matplotlib and numpy are required: pip install matplotlib numpy")
 
-from analyze import (MODEL_ORDER, ROLE_LABELS, build_records, cell, load_judge,
-                     load_quality, load_worker, quality_models_present)
+from analyze import (DISPLAY_NAMES, MODEL_ORDER, ROLE_LABELS, build_records, cell,
+                     load_judge, load_quality, load_worker, quality_models_present)
 
 ROOT = Path(__file__).resolve().parent
 OUT = ROOT / "figures"
@@ -162,7 +163,7 @@ def fig_monitoring_effect(recs: list[dict], models: list[str]) -> None:
                color=UNMON, error_kw=ERRKW, **BAR_EDGE)
         ax.bar(x + w / 2, mv, w, yerr=me, label="Monitored",
                color=MON, error_kw=ERRKW, **BAR_EDGE)
-        ax.set_title(metric, pad=16)
+        ax.set_title(DISPLAY_NAMES[metric], pad=16)
         _xaxis(ax, models, x)
         style(ax, "score (0–1), lower is better" if i == 0 else None,
               _headroom(uv + mv, ue + me))
@@ -207,9 +208,9 @@ def fig_targeted(recs: list[dict], models: list[str], domain: str | None = None)
 
 def fig_oversight_objection(recs: list[dict], models: list[str]) -> None:
     panels = [("oversight_salience",
-               "oversight_salience\ndoes the text mention being checked?"),
+               f"{DISPLAY_NAMES['oversight_salience']}\ndoes the text mention being checked?"),
               ("objection",
-               "objection\ndoes the model push back on the framing?")]
+               f"{DISPLAY_NAMES['objection']}\ndoes the model push back on the framing?")]
     fig, axes = plt.subplots(1, 2, figsize=(26, 10))
     x = np.arange(len(models))
     w = 0.38
@@ -248,7 +249,7 @@ def fig_fidelity(recs: list[dict], models: list[str]) -> None:
     _xaxis(ax, models, x)
     style(ax, "fraction of the 6 source facts correct", FRAC_YLIM, FRAC_TICKS)
     ax.legend(frameon=False, loc="upper left")
-    ax.set_title("ground_truth_fidelity — error bars are SD across 5 repeat runs", pad=18)
+    ax.set_title(f"{DISPLAY_NAMES['ground_truth_fidelity']} — error bars are SD across 5 repeat runs", pad=18)
     fig.tight_layout()
     fig.savefig(OUT / "fig04_ground_truth_fidelity.png")
     plt.close(fig)
