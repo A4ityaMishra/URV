@@ -29,6 +29,7 @@ import threading
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
+from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from judge import layer_quality
@@ -41,7 +42,22 @@ KEY_FIELDS = ["domain", "model", "condition", "temperature", "run_index",
               "trial_id", "quality_model"]
 
 
-def run_one(w: dict, domain: dict, quality_model: str) -> dict:
+def run_one(w: dict[str, Any], domain: dict[str, Any],
+            quality_model: str) -> dict[str, Any]:
+    """Re-score the writing quality of one worker row.
+
+    A failed call or an unparseable reply does not raise. It becomes a row
+    with status "failed", the error text, and the cost the error carried.
+
+    Args:
+        w: A successful worker row.
+        domain: Parsed domain file for the row's domain.
+        quality_model: OpenRouter slug of the quality scorer.
+
+    Returns:
+        A row holding the six trial-key fields, the quality model, the
+        scores (None on failure), the cost and the status.
+    """
     row = {k: w[k] for k in ("domain", "model", "condition", "temperature",
                              "run_index", "trial_id")}
     row["quality_model"] = quality_model
@@ -55,7 +71,8 @@ def run_one(w: dict, domain: dict, quality_model: str) -> dict:
     return row
 
 
-def main():
+def main() -> None:
+    """Re-score every successful worker row not yet scored by this model."""
     ap = argparse.ArgumentParser()
     ap.add_argument("--quality-model", default="google/gemini-3.7-flash")
     ap.add_argument("--domains", nargs="+", default=["finance", "software"])
@@ -63,8 +80,11 @@ def main():
     ap.add_argument("--workers", type=int, default=10)
     a = ap.parse_args()
 
-    doms = {d: json.load(open(ROOT / "domains" / f"{d}.json")) for d in a.domains}
-    jobs = []
+    doms: dict[str, dict[str, Any]] = {}
+    for d in a.domains:
+        with open(ROOT / "domains" / f"{d}.json", encoding="utf-8") as f:
+            doms[d] = json.load(f)
+    jobs: list[tuple[dict[str, Any], dict[str, Any], JsonlStore]] = []
     for p in sorted((ROOT / "raw" / "worker").glob("*.jsonl")):
         for w in JsonlStore(p, []).read_all():
             if w.get("status") != "ok" or w["domain"] not in a.domains:

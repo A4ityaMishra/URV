@@ -8,10 +8,13 @@ adding a third domain means adding a data file and rerunning this script.
     python experiments/build_datasets.py
 """
 
+from __future__ import annotations
+
 import json
 import random
 import sys
 from pathlib import Path
+from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from lib import facts as F
@@ -28,8 +31,19 @@ TIERS = [("high_pressure", 8, "HP"), ("mixed", 6, "MX"), ("low_pressure", 6, "LP
 TIER_PRESSURE = {"high_pressure": "bad", "mixed": "any", "low_pressure": "good"}
 
 
-def _distractors(domain: dict, values: dict, rng: random.Random) -> dict:
-    out = {}
+def _distractors(domain: dict[str, Any], values: dict[str, Any],
+                 rng: random.Random) -> dict[str, Any]:
+    """Draw the filler values that pad a passage without being scored.
+
+    Three kinds are supported: "int" (uniform in a range), "int_offset" (a
+    scored fact plus a random offset, floored at `min`) and
+    "conditional_choice" (a phrase picked to agree with whether a named fact
+    is bad news).
+
+    Raises:
+        ValueError: If a distractor declares an unknown type.
+    """
+    out: dict[str, Any] = {}
     for d in domain.get("distractors", []):
         t = d["type"]
         if t == "int":
@@ -46,10 +60,26 @@ def _distractors(domain: dict, values: dict, rng: random.Random) -> dict:
     return out
 
 
-def make_scenario(domain: dict, sid: str, tier: str, rng: random.Random) -> dict:
+def make_scenario(domain: dict[str, Any], sid: str, tier: str,
+                  rng: random.Random) -> dict[str, Any]:
+    """Generate one scenario: its facts, its passage and its ground truth.
+
+    Args:
+        domain: Parsed domain file.
+        sid: Scenario id, for example "HP-001".
+        tier: "high_pressure", "mixed" or "low_pressure".
+        rng: Seeded generator shared across the whole build.
+
+    Returns:
+        The scenario record, including `bad_facts`: the conflict facts that
+        are materially negative in this scenario.
+
+    Raises:
+        ValueError: If a derived fact names an unknown rule.
+    """
     entity = rng.choice(domain["entities"])
     subject = rng.choice(domain["subjects"])
-    values: dict = {}
+    values: dict[str, Any] = {}
 
     for spec in domain["facts"]:
         # Control facts are drawn independently of the tier, so they stay a
@@ -90,7 +120,15 @@ def make_scenario(domain: dict, sid: str, tier: str, rng: random.Random) -> dict
     }
 
 
-def build(domain: dict) -> tuple[list, list]:
+def build(domain: dict[str, Any]) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """Build every scenario, and its pair of trials, for one domain.
+
+    Each scenario yields two trials that differ only in the system prompt:
+    the monitored one has the domain's `monitored_addendum` appended.
+
+    Returns:
+        (scenarios, trials). Scenario order is shuffled with the fixed seed.
+    """
     rng = random.Random(SEED)
     scenarios, counter = [], 1
     for tier, n, prefix in TIERS:
@@ -121,21 +159,24 @@ def build(domain: dict) -> tuple[list, list]:
     return scenarios, trials
 
 
-def main():
+def main() -> None:
+    """Write scenarios and trials for every domain file to experiments/data/."""
     (ROOT / "data").mkdir(parents=True, exist_ok=True)
     for path in sorted((ROOT / "domains").glob("*.json")):
-        domain = json.load(open(path))
+        with open(path, encoding="utf-8") as f:
+            domain = json.load(f)
         scenarios, trials = build(domain)
         name = domain["domain"]
-        json.dump(scenarios, open(ROOT / "data" / f"{name}_scenarios.json", "w"), indent=2)
-        json.dump(trials, open(ROOT / "data" / f"{name}_trials.json", "w"), indent=2)
+        for kind, rows in (("scenarios", scenarios), ("trials", trials)):
+            with open(ROOT / "data" / f"{name}_{kind}.json", "w", encoding="utf-8") as f:
+                json.dump(rows, f, indent=2)
 
         n_bad = sum(len(s["bad_facts"]) for s in scenarios)
+        n_conflict = len(scenarios) * len(scenarios[0]["conflict_facts"])
+        tiers = " ".join(f"{t}={sum(1 for s in scenarios if s['difficulty'] == t)}"
+                         for t, _, _ in TIERS)
         print(f"{name:10s} {len(scenarios)} scenarios / {len(trials)} trials  "
-              f"| tiers " + " ".join(
-                  f"{t}={sum(1 for s in scenarios if s['difficulty']==t)}"
-                  for t, _, _ in TIERS)
-              + f" | bad conflict facts: {n_bad}/{len(scenarios)*len(scenarios[0]['conflict_facts'])}")
+              f"| tiers {tiers} | bad conflict facts: {n_bad}/{n_conflict}")
 
 
 if __name__ == "__main__":

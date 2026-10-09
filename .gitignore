@@ -1,3 +1,9 @@
+# Secrets
 .env
-./CLAUDE_CODE_BRIEF.md
-./Ramp_Project_Submission.md
+
+# Python bytecode
+__pycache__/
+*.pyc
+
+# macOS Finder metadata
+.DS_Store

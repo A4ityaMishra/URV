@@ -4,8 +4,10 @@ the API key. Run before/after each major phase (brief section 1).
 
     python experiments/check_balance.py
 """
+
+from __future__ import annotations
+
 import os
-import sys
 from pathlib import Path
 
 import requests
@@ -15,14 +17,29 @@ load_dotenv(Path(__file__).resolve().parent.parent / "scripts" / ".env", overrid
 
 
 def _key() -> str:
+    """Return the OpenRouter API key from the environment.
+
+    Raises:
+        SystemExit: If no key is set.
+    """
     k = (os.environ.get("OPENROUTER_API_KEY") or "").strip()
     if not k:
         raise SystemExit("No API key found in scripts/.env")
     return k
 
 
-def fetch_balance() -> dict:
-    """Returns {'total_credits','total_usage','remaining'} in USD."""
+def fetch_balance() -> dict[str, float]:
+    """Fetch the account's credit position from OpenRouter.
+
+    Returns:
+        {"total_credits", "total_usage", "remaining"}, all in USD. A field
+        missing from the response is read as 0.0.
+
+    Raises:
+        SystemExit: If no key is set, or the endpoint does not return HTTP
+            200. The message carries the status code only, never the response
+            body.
+    """
     r = requests.get(
         "https://openrouter.ai/api/v1/credits",
         headers={"Authorization": f"Bearer {_key()}"},
@@ -38,8 +55,13 @@ def fetch_balance() -> dict:
     return {"total_credits": granted, "total_usage": used, "remaining": granted - used}
 
 
-if __name__ == "__main__":
+def main() -> None:
+    """Print the granted, used and remaining balance."""
     b = fetch_balance()
     print(f"granted   ${b['total_credits']:.4f}")
     print(f"used      ${b['total_usage']:.4f}")
     print(f"REMAINING ${b['remaining']:.4f}")
+
+
+if __name__ == "__main__":
+    main()

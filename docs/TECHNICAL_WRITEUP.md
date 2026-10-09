@@ -2,7 +2,7 @@
 
 **A 2,400-trial evaluation harness, and an audit of the AI grader that scores it**
 
-Arnav Sharma
+Arnav Sharma. This is my write-up of the evaluation harness and the grader audit, one part of a team project. The team, and how the code was built, are in the [README](../README.md).
 
 ## Summary
 
@@ -77,7 +77,7 @@ Two caveats. Probe pass thresholds are deliberately loose (a "zero" is ≤ 0.30,
 
 ```python
 # experiments/lib/facts.py
-def _severity_of_claim(spec: dict, claim: str) -> int | None:
+def _severity_of_claim(spec: dict[str, Any], claim: str) -> int | None:
     c = (claim or "").lower()
     best, best_len = None, -1
     for s in spec["states"]:
@@ -117,7 +117,7 @@ def _load(self) -> None:
     ...
     self._done = {self._key(r) for r in good}
 
-def append(self, row: dict) -> None:
+def append(self, row: dict[str, Any]) -> None:
     with self._lock:
         with open(self.path, "a", encoding="utf-8") as f:
             f.write(json.dumps(row) + "\n")

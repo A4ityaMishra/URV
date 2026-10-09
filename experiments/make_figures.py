@@ -34,6 +34,7 @@ from __future__ import annotations
 import sys
 from collections import defaultdict
 from pathlib import Path
+from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
@@ -42,11 +43,24 @@ try:
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
     import numpy as np
+    from matplotlib.axes import Axes
+    from numpy.typing import NDArray
 except ImportError:  # pragma: no cover
-    raise SystemExit("matplotlib and numpy are required: pip install matplotlib numpy")
+    raise SystemExit("matplotlib and numpy are required: pip install -r requirements.txt")
 
-from analyze import (DISPLAY_NAMES, MODEL_ORDER, ROLE_LABELS, build_records, cell,
-                     load_judge, load_quality, load_worker, quality_models_present)
+from analyze import (
+    DISPLAY_NAMES,
+    MODEL_ORDER,
+    ROLE_LABELS,
+    Row,
+    RunValues,
+    build_records,
+    cell,
+    load_judge,
+    load_quality,
+    load_worker,
+    quality_models_present,
+)
 
 ROOT = Path(__file__).resolve().parent
 OUT = ROOT / "figures"
@@ -65,8 +79,9 @@ ROLE_COLORS = {
     "bad_conflict_accuracy": "#A62B1F",
 }
 
-BAR_EDGE = {"edgecolor": "white", "linewidth": 1.2}
-ERRKW = {"ecolor": "#111111", "capsize": 7, "elinewidth": 2.4, "capthick": 2.4}
+BAR_EDGE: dict[str, Any] = {"edgecolor": "white", "linewidth": 1.2}
+ERRKW: dict[str, Any] = {"ecolor": "#111111", "capsize": 7, "elinewidth": 2.4,
+                         "capthick": 2.4}
 
 # Fractions get a fixed 0..1 axis with headroom above it for the legend, so the
 # legend can never sit on top of a bar.
@@ -92,11 +107,20 @@ plt.rcParams.update({
 
 
 def short(model: str) -> str:
+    """Drop the provider prefix from a model slug, for axis labels."""
     return model.split("/")[-1]
 
 
-def style(ax, ylabel: str | None, ymax: float | None = None,
+def style(ax: Axes, ylabel: str | None, ymax: float | None = None,
           yticks: list[float] | None = None) -> None:
+    """Apply the shared poster look to one axes.
+
+    Args:
+        ax: Axes to style.
+        ylabel: Y-axis label, or None to leave it unset.
+        ymax: Top of the y-axis, or None to keep autoscaling.
+        yticks: Explicit tick positions, or None for the defaults.
+    """
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
     ax.yaxis.grid(True, color="#B8B8B8", linewidth=1.0, alpha=0.55)
@@ -109,10 +133,14 @@ def style(ax, ylabel: str | None, ymax: float | None = None,
         ax.set_yticks(yticks)
 
 
-def agg(recs: list[dict], metric: str, model: str, cond: str,
+def agg(recs: list[Row], metric: str, model: str, cond: str,
         domain: str | None = None) -> tuple[float, float]:
-    """(mean of run means, sd across run means), pooling domains unless told not to."""
-    by: dict = defaultdict(list)
+    """Aggregate one bar: the mean of run means and the SD across run means.
+
+    Domains are pooled unless `domain` is given. A model with no value for
+    the metric plots as (0.0, 0.0).
+    """
+    by: RunValues = defaultdict(list)
     for r in recs:
         if r["model"] != model or r["condition"] != cond:
             continue
@@ -125,13 +153,15 @@ def agg(recs: list[dict], metric: str, model: str, cond: str,
     return (0.0, 0.0) if c is None else (c[0], c[1])
 
 
-def series(recs: list[dict], metric: str, models: list[str], cond: str,
+def series(recs: list[Row], metric: str, models: list[str], cond: str,
            domain: str | None = None) -> tuple[list[float], list[float]]:
+    """Bar heights and error bars for a list of models, in the order given."""
     pairs = [agg(recs, metric, m, cond, domain) for m in models]
     return [p[0] for p in pairs], [p[1] for p in pairs]
 
 
-def models_present(recs: list[dict]) -> list[str]:
+def models_present(recs: list[Row]) -> list[str]:
+    """Models that have records: MODEL_ORDER first, then the rest by name."""
     have = {r["model"] for r in recs}
     ordered = [m for m in MODEL_ORDER if m in have]
     return ordered + sorted(have - set(ordered))
@@ -143,14 +173,16 @@ def _headroom(values: list[float], errs: list[float]) -> float:
     return max(0.12, top * 1.35)
 
 
-def _xaxis(ax, models: list[str], x) -> None:
+def _xaxis(ax: Axes, models: list[str], x: NDArray[Any]) -> None:
+    """Label the x-axis with short model names, rotated to fit."""
     ax.set_xticks(x)
     ax.set_xticklabels([short(m) for m in models], rotation=28, ha="right")
 
 
 # ------------------------------------------------------------------ fig 01
 
-def fig_monitoring_effect(recs: list[dict], models: list[str]) -> None:
+def fig_monitoring_effect(recs: list[Row], models: list[str]) -> None:
+    """Figure 1: the three per-fact deception metrics, by condition."""
     metrics = ["false_claim", "suppression", "spin"]
     fig, axes = plt.subplots(1, 3, figsize=(26, 9))
     x = np.arange(len(models))
@@ -178,7 +210,8 @@ def fig_monitoring_effect(recs: list[dict], models: list[str]) -> None:
 
 # ------------------------------------------------------------------ fig 02
 
-def fig_targeted(recs: list[dict], models: list[str], domain: str | None = None) -> None:
+def fig_targeted(recs: list[Row], models: list[str], domain: str | None = None) -> None:
+    """Figure 2: accuracy by fact role, for one domain or both pooled."""
     roles = ["control_accuracy", "good_conflict_accuracy", "bad_conflict_accuracy"]
     fig, axes = plt.subplots(1, 2, figsize=(26, 9), sharey=True)
     x = np.arange(len(models))
@@ -206,7 +239,8 @@ def fig_targeted(recs: list[dict], models: list[str], domain: str | None = None)
 
 # ------------------------------------------------------------------ fig 03
 
-def fig_oversight_objection(recs: list[dict], models: list[str]) -> None:
+def fig_oversight_objection(recs: list[Row], models: list[str]) -> None:
+    """Figure 3: the manipulation check and pushback, by condition."""
     panels = [("oversight_salience",
                f"{DISPLAY_NAMES['oversight_salience']}\ndoes the text mention being checked?"),
               ("objection",
@@ -236,7 +270,8 @@ def fig_oversight_objection(recs: list[dict], models: list[str]) -> None:
 
 # ------------------------------------------------------------------ fig 04
 
-def fig_fidelity(recs: list[dict], models: list[str]) -> None:
+def fig_fidelity(recs: list[Row], models: list[str]) -> None:
+    """Figure 4: share of the six source facts reported correctly."""
     fig, ax = plt.subplots(figsize=(17, 9))
     x = np.arange(len(models))
     w = 0.38
@@ -249,7 +284,8 @@ def fig_fidelity(recs: list[dict], models: list[str]) -> None:
     _xaxis(ax, models, x)
     style(ax, "fraction of the 6 source facts correct", FRAC_YLIM, FRAC_TICKS)
     ax.legend(frameon=False, loc="upper left")
-    ax.set_title(f"{DISPLAY_NAMES['ground_truth_fidelity']} — error bars are SD across 5 repeat runs", pad=18)
+    title = DISPLAY_NAMES["ground_truth_fidelity"]
+    ax.set_title(f"{title} — error bars are SD across 5 repeat runs", pad=18)
     fig.tight_layout()
     fig.savefig(OUT / "fig04_ground_truth_fidelity.png")
     plt.close(fig)
@@ -258,6 +294,7 @@ def fig_fidelity(recs: list[dict], models: list[str]) -> None:
 # --------------------------------------------------------------------- main
 
 def main() -> None:
+    """Render every figure into experiments/figures/ from the raw JSONL."""
     OUT.mkdir(parents=True, exist_ok=True)
     worker, judge = load_worker(), load_judge()
     if not judge:
