@@ -24,6 +24,7 @@ import threading
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
+from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from lib.api import CallError, call
@@ -44,16 +45,36 @@ KEY_FIELDS = ["domain", "model", "condition", "temperature", "run_index", "trial
 
 
 def safe(model: str) -> str:
+    """Return a model slug made safe for use in a file name."""
     return model.replace("/", "_")
 
 
 def store_for(domain: str, model: str, temp: float) -> JsonlStore:
+    """Open the checkpoint store for one (domain, model, temperature) file."""
     return JsonlStore(ROOT / "raw" / "worker" / f"{domain}__{safe(model)}__T{temp}.jsonl",
                       KEY_FIELDS)
 
 
-def run_one(trial: dict, model: str, temp: float, run_index: int) -> dict:
-    row = {
+def run_one(trial: dict[str, Any], model: str, temp: float,
+            run_index: int) -> dict[str, Any]:
+    """Run one trial and return its result row.
+
+    An API failure does not raise. It becomes a row with status "failed", the
+    error text and whatever the attempts cost, so the failure is accounted
+    for instead of lost.
+
+    Args:
+        trial: One entry from data/<domain>_trials.json.
+        model: OpenRouter slug of the model under study.
+        temp: Sampling temperature for this call.
+        run_index: 1-based number of the repeat run.
+
+    Returns:
+        A row holding the six resume-key fields, the scenario's ground truth
+        and fact lists, the response (None on failure), the cost, and the
+        call diagnostics from `_meta`.
+    """
+    row: dict[str, Any] = {
         "domain": trial["domain"],
         "model": model,
         "condition": trial["condition"],
@@ -82,14 +103,21 @@ def run_one(trial: dict, model: str, temp: float, run_index: int) -> dict:
     return row
 
 
-def _meta(meta: dict) -> dict:
+def _meta(meta: dict[str, Any]) -> dict[str, Any]:
+    """Pick out the call diagnostics that are stored on every row."""
     return {"finish_reason": meta.get("finish_reason"),
             "provider": meta.get("provider"),
             "model_served": meta.get("model_served"),
             "attempts": meta.get("attempts")}
 
 
-def main():
+def main() -> None:
+    """Queue every trial that is not yet on disk, then run the queue.
+
+    Trials are dispatched from a thread pool and each result is appended to
+    its store as soon as it returns, so an interrupted sweep resumes from
+    where it stopped.
+    """
     ap = argparse.ArgumentParser()
     ap.add_argument("--domains", nargs="+", default=["finance", "software"])
     ap.add_argument("--models", nargs="+", default=MODELS)
@@ -104,9 +132,10 @@ def main():
         a.models = ["openai/gpt-4o-mini"]
         a.runs, a.scenarios, a.temps = 1, 3, [0.7]
 
-    jobs = []
+    jobs: list[tuple[dict[str, Any], str, float, int, JsonlStore]] = []
     for domain in a.domains:
-        trials = json.load(open(ROOT / "data" / f"{domain}_trials.json"))
+        with open(ROOT / "data" / f"{domain}_trials.json", encoding="utf-8") as f:
+            trials = json.load(f)
         if a.scenarios:
             keep = sorted({t["scenario_id"] for t in trials})[:a.scenarios]
             trials = [t for t in trials if t["scenario_id"] in keep]
@@ -153,8 +182,12 @@ def main():
 
 
 def write_progress() -> None:
-    """experiments/progress.json -- status at a glance, for me and for you."""
-    prog: dict = {"worker": {}, "updated": time.strftime("%Y-%m-%d %H:%M:%S")}
+    """Write experiments/progress.json, a status summary of the worker stores.
+
+    For each store it records the row count, successes, failures, the repeat
+    runs present and the cost, plus the total worker spend to date.
+    """
+    prog: dict[str, Any] = {"worker": {}, "updated": time.strftime("%Y-%m-%d %H:%M:%S")}
     grand = 0.0
     for p in sorted((ROOT / "raw" / "worker").glob("*.jsonl")):
         rows = JsonlStore(p, KEY_FIELDS).read_all()
@@ -164,11 +197,12 @@ def write_progress() -> None:
             "rows": len(rows),
             "ok": sum(1 for r in rows if r.get("status") == "ok"),
             "failed": sum(1 for r in rows if r.get("status") != "ok"),
-            "runs": sorted({r.get("run_index") for r in rows}),
+            "runs": sorted({r["run_index"] for r in rows}),
             "cost_usd": round(c, 4),
         }
     prog["worker_cost_usd"] = round(grand, 4)
-    json.dump(prog, open(ROOT / "progress.json", "w"), indent=2)
+    with open(ROOT / "progress.json", "w", encoding="utf-8") as f:
+        json.dump(prog, f, indent=2)
     print(f"progress -> experiments/progress.json (worker spend to date ${grand:.4f})")
 
 

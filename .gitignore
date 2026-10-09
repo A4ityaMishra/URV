@@ -1,2 +1,9 @@
+# Secrets
 .env
-./CLAUDE_CODE_BRIEF.md
+
+# Python bytecode
+__pycache__/
+*.pyc
+
+# macOS Finder metadata
+.DS_Store

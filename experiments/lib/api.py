@@ -1,7 +1,8 @@
 """
 One OpenRouter call path, shared by the worker runner and the judges.
 
-Fixes the three accounting bugs found in the audit of scripts/OpenRouter.py:
+Fixes the three accounting bugs found in the audit of
+legacy/scripts/OpenRouter.py:
 
   1. Retries. Network errors, 429, and 5xx now retry with exponential backoff
      and jitter. 401/403 (auth) and other 4xx (malformed request, unknown
@@ -26,6 +27,7 @@ import os
 import random
 import time
 from pathlib import Path
+from typing import Any
 
 import requests
 from dotenv import load_dotenv
@@ -42,10 +44,24 @@ BASE_BACKOFF = float(os.environ.get("BASE_BACKOFF", "2.0"))
 
 
 class CallError(RuntimeError):
-    """Failure that still knows what it cost and why it stopped."""
+    """A failed completion that still knows what it cost and why it stopped.
 
-    def __init__(self, message: str, cost: float = 0.0, meta: dict | None = None,
-                 retryable: bool = False):
+    Args:
+        message: Description of the last failure.
+        cost: Dollars charged across every attempt made before giving up.
+        meta: Diagnostics for the call; see `call` for the keys.
+        retryable: False for a permanent failure (auth, malformed request).
+            True when a transient failure outlasted every retry.
+
+    Attributes:
+        cost: As passed in.
+        meta: As passed in, or an empty dict.
+        retryable: As passed in.
+    """
+
+    def __init__(self, message: str, cost: float = 0.0,
+                 meta: dict[str, Any] | None = None,
+                 retryable: bool = False) -> None:
         super().__init__(message)
         self.cost = cost
         self.meta = meta or {}
@@ -53,27 +69,56 @@ class CallError(RuntimeError):
 
 
 def _key() -> str:
+    """Return the OpenRouter API key from the environment.
+
+    Raises:
+        CallError: If no key is set. The key is never put into an error
+            message or a log line.
+    """
     k = (os.environ.get("OPENROUTER_API_KEY") or "").strip()
     if not k:
         raise CallError("No API key in environment (scripts/.env)")
     return k
 
 
-def call(model: str, messages: list[dict], temperature: float,
-         timeout: int = 120, max_tokens: int | None = None) -> tuple[str, float, dict]:
-    """One completion. Returns (content, total_cost_across_attempts, meta).
+def call(model: str, messages: list[dict[str, str]], temperature: float,
+         timeout: int = 120,
+         max_tokens: int | None = None) -> tuple[str, float, dict[str, Any]]:
+    """Request one chat completion, retrying transient failures.
 
     `messages` is used as given -- callers build a fresh list per trial, which
     is what keeps trials stateless and concurrent dispatch safe.
 
-    Raises CallError (carrying .cost) if every attempt fails.
+    Args:
+        model: OpenRouter model slug, for example "openai/gpt-4o-mini".
+        messages: Chat messages, each with a "role" and a "content".
+        temperature: Sampling temperature, sent explicitly on every call.
+        timeout: Seconds to wait for each HTTP attempt.
+        max_tokens: Cap on completion length. Left out of the request when
+            None.
+
+    Returns:
+        A (content, cost, meta) tuple. `cost` is the total charged across all
+        attempts, including earlier attempts that failed. `meta` holds
+        `attempts`, `finish_reason`, `provider`, `temperature`,
+        `model_requested` and, once a response body has been parsed,
+        `model_served`.
+
+    Raises:
+        CallError: If no usable completion is obtained. Network errors, HTTP
+            408/409/429/5xx, a body that is not JSON, a response with no
+            choices, and empty or whitespace-only content are each retried,
+            up to MAX_ATTEMPTS attempts in total. HTTP 400/401/402/403/404/422
+            raise at once, and any other non-200 status fails without a
+            retry. In every case the exception carries the cost accrued so
+            far in `.cost`.
     """
-    payload: dict = {
+    payload: dict[str, Any] = {
         "model": model,
         "messages": messages,
-        # Explicit on every single call. Left unset, the provider default
-        # applies and repeat runs collapse toward identical text, which would
-        # make the across-run standard deviations meaningless.
+        # Explicit on every single call. Left unset, the provider's default
+        # applies silently, and the spread across repeat runs would rest on a
+        # setting that nobody chose and no row recorded.
         "temperature": temperature,
         "usage": {"include": True},
     }
@@ -81,8 +126,8 @@ def call(model: str, messages: list[dict], temperature: float,
         payload["max_tokens"] = max_tokens
 
     cost = 0.0
-    meta: dict = {"attempts": 0, "finish_reason": None, "provider": None,
-                  "temperature": temperature, "model_requested": model}
+    meta: dict[str, Any] = {"attempts": 0, "finish_reason": None, "provider": None,
+                            "temperature": temperature, "model_requested": model}
     last = "no attempt made"
 
     for attempt in range(1, MAX_ATTEMPTS + 1):
@@ -159,6 +204,18 @@ def call(model: str, messages: list[dict], temperature: float,
 
 
 def _sleep(attempt: int, retry_after: str | None = None) -> None:
+    """Wait before the next attempt.
+
+    Without a usable `retry_after`, the wait is exponential backoff with
+    jitter: BASE_BACKOFF * 2 ** (attempt - 1) seconds plus up to one second,
+    capped at 30.
+
+    Args:
+        attempt: 1-based number of the attempt that has just failed.
+        retry_after: The server's Retry-After header, if it sent one. A
+            numeric value is honoured, capped at 30 seconds. Anything else,
+            such as an HTTP date, falls back to the computed backoff.
+    """
     if retry_after:
         try:
             time.sleep(min(float(retry_after), 30.0))

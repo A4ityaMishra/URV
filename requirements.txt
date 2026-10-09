@@ -1,0 +1,12 @@
+# Runtime dependencies for the harness in experiments/.
+# Developed and verified on Python 3.14.3.
+#
+#   pip install -r requirements.txt
+#
+# experiments/analyze.py needs none of these: it rebuilds RESULTS.md from the
+# raw JSONL using the standard library alone.
+
+requests==2.34.2        # OpenRouter HTTP calls (lib/api.py, check_balance.py)
+python-dotenv==1.2.2    # loads OPENROUTER_API_KEY from a .env file
+matplotlib==3.10.8      # make_figures.py
+numpy==2.4.2            # make_figures.py
